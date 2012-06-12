@@ -1,0 +1,211 @@
+#!/usr/bin/env ruby
+
+require 'gli'
+require 'yaml'
+require 'parallels/key_administrator'
+
+class KeyAdministratorCLI
+  include GLI::App
+
+  def start arguments
+    program_desc "A command-line interface to the Parallels' Key Administration Portal."
+
+    long_desc 'Foobar'
+
+    desc 'Connect to the portal at this hostname.'
+    flag [:hostname], :default_value => 'ka.parallels.com'
+
+    desc 'Connect to the portal using this username.'
+    flag [:username]
+
+    desc 'Connect to the portal using this password.'
+    flag [:password]
+
+    pre do |global_options, command, options, args|
+      config_file_path = File.join ENV['HOME'], '.parallels/key-administrator.yml'
+      raw_config = YAML.load_file config_file_path if File.exists? config_file_path
+      config = raw_config.inject({}){|acc, (k, v)| acc[k.to_sym] = v; acc}
+      global_options.merge! config if raw_config
+
+      [:hostname, :username, :password].each do |key|
+        help_now! "A #{key.to_s} is required!" unless global_options[key]
+      end
+
+      hostname = global_options[:hostname]
+      username = global_options[:username]
+      password = global_options[:password]
+
+      @portal = Parallels::KeyAdministrator::Portal.new hostname, :username => username, :password => password
+
+      credentials_valid = @portal.client.login_valid?
+
+      exit_now! 'Provided credentials are invalid or error while connecting to portal.' unless credentials_valid
+
+      # Undocumented: return true to continue processing.
+      credentials_valid
+    end
+
+    post do |global_options, command, options, args|
+      # Do cleanup if necessary.
+    end
+
+    desc 'Lookup licenses attached to any of the following IP or MAC addresses.'
+    command 'lookup' do |cmd|
+      cmd.desc 'One or more comma-separated IP addresses to lookup.'
+      cmd.flag [:ips], :default_value => ''
+
+      cmd.desc 'One or more MAC addresses, separated by commas, to lookup.'
+      cmd.flag [:macs], :default_value => ''
+
+      cmd.desc 'Only show active license keys.'
+      cmd.switch [:active]
+
+      cmd.action do |global_options, options, args|
+        criteria = {
+          :ips  => [],
+          :macs => []
+        }
+
+        options[:ips].split(/,\s*?/).map do |ip|
+          criteria[:ips] << ip if ip.match /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/
+        end
+
+        options[:macs].split(/,\s*?/).map do |mac|
+          criteria[:macs] << mac if mac.match /^(\S{1,2}:\S{1,2}:\S{1,2}:\S{1,2}:\S{1,2}:\S{1,2})$/
+        end
+
+        response = @portal.key.find_by criteria
+
+        data = response['keyInfos']
+
+        if options[:active]
+          data.reject! { |key, value| key['terminated'] == true }
+        end
+
+        if not data.empty?
+          data.each do |key|
+            puts "Key: #{key['keyNumber']} (#{key['keyType']})"
+            puts "  Created:       #{key['createDate'].to_date.rfc2822}"
+            puts "  Last Report:   #{key['lastReportingDate'].to_date.rfc2822}"
+            puts "  Reporting IPs: #{key['lastReportingIp']}"
+            puts "  Key Status:    #{(key['terminated'] ? 'Terminated' : 'Active')}"
+          end
+        else
+          puts "No license keys available."
+        end
+      end
+    end
+
+    desc 'Send a license key to a recipient by email.'
+    command 'send-by-email' do |cmd|
+      cmd.desc 'Send the license key in ZIP archive format.'
+      cmd.switch [:compress]
+
+      cmd.action do |global_options, options, args|
+        exit_now! 'Please provide both a recipient email address and a key number to send.' if args.empty? or args.length != 2
+        recipient = args.shift
+        number = args.shift
+
+        if @portal.key.send_by_email number, recipient, options[:compress]
+          puts "License key #{number} successfully sent to #{recipient}."
+        else
+          puts "Could not send license key #{number} to #{recipient}; please check your arguments."
+        end
+      end
+    end
+
+
+    desc 'Annotate a license key with a message.'
+    command 'annotate' do |cmd|
+      cmd.desc 'The message to attach to the license key.'
+      cmd.flag [:message]
+
+      cmd.desc 'Same as --message but read from a file or "-" for standard input.'
+      cmd.flag [:file]
+
+      cmd.action do |global_options, options, args|
+        exit_now! 'This command is currently unimplemented.'
+      end
+    end
+
+    desc 'Retrieve a license key and display it to standard output.'
+    command 'retrieve' do |cmd|
+      cmd.desc 'Key should be compatible with the previous minor version.'
+      cmd.switch [:compatible]
+
+      cmd.desc 'Store the key to a file instead of displaying it to standard output.'
+      cmd.flag [:output]
+
+      cmd.action do |global_options, options, args|
+        exit_now! 'Please provide a license key number to retrieve.' if args.empty? or args.length != 1
+        response = @portal.key.retrieve args.shift, options[:compatible]
+
+        # XXX: Symbolize response keys.
+        key_number = response['keyNumber']
+        key_data = response['key']
+
+        if options[:output]
+          # Write the key to the file specified.
+          File.open options[:output], File::CREAT | File::TRUNC | File::RDWR, 0644 do |handle|
+            handle.write key_data
+          end
+          # Print a status message to standard output.
+          puts "Wrote #{key_number} to #{options[:output]}."
+        else
+          # Print the key to standard output.
+          puts key_data
+        end
+      end
+    end
+
+    desc 'Terminate a license key specified by the key-number.'
+    command 'terminate' do |cmd|
+      cmd.desc 'Do not ask for confirmation before terminating license. Use with extreme caution.'
+      cmd.switch [:force]
+
+      cmd.action do |global_options, options, args|
+        exit_now! 'This command is currently unimplemented.'
+      end
+    end
+
+    desc 'Renew a license key for an additional fixed period, as defined by the key type at purchase time.'
+    command 'renew' do |cmd|
+      cmd.action do |global_options, options, args|
+        exit_now! 'Please provide a license key number to renew.' if args.empty? or args.length != 1
+        key_number = args.shift
+
+        response = @portal.key.renew key_number
+
+        if response.nil?
+          puts "License key #{key_number} could not be renewed."
+        else
+          puts response
+        end
+      end
+    end
+
+    desc 'Retrieve the usage information for a Plesk license key, including resellers, domains, and clients.'
+    command 'usage' do |cmd|
+      cmd.action do |global_options, options, args|
+        exit_now! 'Please provide a license key number to review.' if args.empty? or args.length != 1
+        key_number = args.shift
+
+        response = @portal.key.last_usage_info key_number
+
+        if response.nil?
+          puts "No data has been reported for #{key_number} yet."
+        else
+          puts response
+        end
+      end
+    end
+
+    run arguments
+  end
+end
+
+cli = KeyAdministratorCLI.new
+code = cli.start ARGV
+exit code
+
+#EOF
