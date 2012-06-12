@@ -10,8 +10,6 @@ class KeyAdministratorCLI
   def start arguments
     program_desc "A command-line interface to the Parallels' Key Administration Portal."
 
-    long_desc 'Foobar'
-
     desc 'Connect to the portal at this hostname.'
     flag [:hostname], :default_value => 'ka.parallels.com'
 

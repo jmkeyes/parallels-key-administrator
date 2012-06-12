@@ -13,14 +13,14 @@ Installation
 ------------
 
  1. Check out the source with `git clone git://github.com/jmkeyes/parallels-key-administrator.git`
- 2. Build and install them gem with `gem build parallels-key-administrator.gemspec && gem install -l parallels-key-administrator`.
+ 2. Build and install them gem with `gem build parallels-key-administrator.gemspec` and `gem install -l parallels-key-administrator`.
  3. Add `require 'parallels/key_administrator'` to the script you want to automate.
 
 Developer Usage
 ---------------
 
-Install the *parallels-key-administrator* gem from source. From there, connecting to
-the Parallels Key Administrator API is as simple as filling in the partner API
+Install the *parallels-key-administrator* gem from source. From there, connecting
+to the Parallels Key Administrator API is as simple as filling in the partner API
 credentials into the following code (where USERNAME and PASSWORD are replaced with
 your Partner API credentials):
 
