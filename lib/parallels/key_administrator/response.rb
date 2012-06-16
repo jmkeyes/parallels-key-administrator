@@ -89,7 +89,7 @@ module Parallels #:nodoc: Already documented
       # ==== Example
       #
       #   response = portal.keys.retrieve 'PLSK.00000000.0000'
-      #   puts "Retreiving key was successful." if response.success?
+      #   puts "Retreiving key was successful." if response.successful?
       #
       # ==== Note
       #
@@ -101,7 +101,7 @@ module Parallels #:nodoc: Already documented
 
       #
       def [] index
-        # Convert :snake_case into lowerCamelCase.
+        # Convert :snake_case into lowerCamelCase for key lookup.
         key = index.to_s.dup
         key.gsub!(/\/(.?)/){ "::#{$1.upcase}" }
         key.gsub!(/(?:_+|-+)([a-z])/){ $1.upcase }

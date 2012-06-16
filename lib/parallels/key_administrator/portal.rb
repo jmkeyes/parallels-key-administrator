@@ -74,7 +74,7 @@ module Parallels #:nodoc: Already documented
         end
       end
 
-      # Action a request to the key administration portal.
+      # Send a request to the key administration portal.
       #
       # ==== Attributes
       #
@@ -86,7 +86,7 @@ module Parallels #:nodoc: Already documented
       #
       #     portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', :username => '', :password => ''
       #     response = portal.request 'partner10.validateLogin'
-      #     puts "You have valid credentials." if response.success?
+      #     puts "You have valid credentials." if response.successful?
       #
       # ==== Note
       #
@@ -111,8 +111,8 @@ module Parallels #:nodoc: Already documented
       # ==== Example
       #
       #     portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', :username => '', :password => ''
-      #     client = portal.client.find_by :email => 'joe@domain.com'
-      #     puts client['companyName'] if client
+      #     response = portal.client.find_by :email => 'joe@domain.com'
+      #     puts response[:company_mame] if response.successful?
       #
       # ==== Note
       #
@@ -130,8 +130,8 @@ module Parallels #:nodoc: Already documented
       # ==== Example
       #
       #     portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', :username => '', :password => ''
-      #     data = portal.key.retrieve 'PLSK.00000000.0000'
-      #     puts data['key'] if data
+      #     response = portal.key.retrieve 'PLSK.00000000.0000'
+      #     puts response[:key] if response.successful?
       #
       # ==== Note
       #

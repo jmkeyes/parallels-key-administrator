@@ -49,7 +49,8 @@ module Parallels #:nodoc: Already documented.
         #
         # ==== Example
         #
-        #     puts "Login credentials are valid." if portal.clients.login_valid?
+        #     response = portal.clients.login_valid?
+        #     puts "Login credentials are valid." if response.successful?
         #
         def login_valid?
           @portal.request 'partner10.validateLogin'
@@ -59,8 +60,8 @@ module Parallels #:nodoc: Already documented.
         #
         # ==== Example
         #
-        #     password = portal.clients.generate_new_password!
-        #     puts "New password is now '#{password}'." if password
+        #     response = portal.clients.generate_new_password!
+        #     puts "New password is now '#{response[:new_password]}'." if response.successful?
         #
         def generate_new_password!
           @portal.request 'partner10.generateNewPassword'

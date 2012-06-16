@@ -33,13 +33,26 @@ your Partner API credentials):
     portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', :username => 'USERNAME', :password => 'PASSWORD'
 
     # Validate your login credentials.
-    if portal.client.login_valid?
+    request = portal.client.login_valid?
+
+    if request.successful?
         puts 'Your credentials are valid and activated.'
     else
         puts 'Your credentials are invalid.'
     end
 
-For the moment, just read the source. I hope the comments are easy enough to understand.
+Every call returns a Parallels::KeyAdministrator::Response object, which exposes
+`#successful?` method, allowing you to see the status of the call. There are also
+`#code`, `#message`, and `#data` methods that return the error code, the response
+message, and a hash of returned data or nil. The error message is a human readable
+explanation of the status of the call. The response codes are mapped as follows:
+
+ + `-1` is reserved for XMLRPC faults. The XMLRPC fault code and string are contained in the message.
+ + `0 - 600` are reserved for Parallels' Key Administrator error codes.
+ + All other code are reserved for the time being.
+
+If you want to understand something better, just read the source. The comments are
+easy enough to understand.
 
 Administration Utility
 ----------------------
@@ -48,4 +61,3 @@ A utility to access the functionality of this gem is convieniently bundled with 
 install the gem as per the instructions above and invoke the `parallels-key-administrator`
 utility from the command line. To learn more about the options it provides, simply invoke
 the command without any arguments or by using the `--help` command line option.
-
