@@ -1,6 +1,5 @@
 # lib/parallels/key_administrator/api.rb
 
-require 'parallels/key_administrator/api/base'
 require 'parallels/key_administrator/api/common'
 require 'parallels/key_administrator/api/client'
 require 'parallels/key_administrator/api/key'
