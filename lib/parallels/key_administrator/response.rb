@@ -11,6 +11,8 @@ module Parallels #:nodoc: Already documented
 
       # Response codes as documented by Parallels' API Guide.
       RESPONSE_CODES = {
+        # XMLRPC Fault.
+        -1 => 'Unknown XMLRPC Fault.',
 
         # No result code given.
         0 => 'No response, or no response code given',
@@ -58,8 +60,15 @@ module Parallels #:nodoc: Already documented
       attr_reader :code, :message, :data
 
       # Build a Response object given result data. Syntactic sugar.
-      def self.build_from_result data
-        Response.new data
+      def self.from_result result
+        code    = result.delete 'resultCode'
+        message = result.delete 'resultDesc'
+        Response.new code, message, result
+      end
+
+      # Build a Response object given an XMLRPC fault.
+      def self.from_fault fault
+        Response.new -1, "#{fault.faultString} (#{fault.faultCode})", fault
       end
 
       # Initialize a new Response class from the XMLRPC result data
@@ -69,9 +78,9 @@ module Parallels #:nodoc: Already documented
       #  +data+ - The raw data of an XMLRPC call, usually being a hash that contains
       #           at least two elements: :resultCode (a three-digit numeric code)
       #           and :resultDesc (a human-readable message describing the response).
-      def initialize data
-        @code    = data.delete 'resultCode' || 0
-        @message = data.delete 'resultDesc' || RESPONSE_CODES[@code]
+      def initialize code, message, data = nil
+        @code    = code
+        @message = message
         @data    = data
       end
 
@@ -86,22 +95,18 @@ module Parallels #:nodoc: Already documented
       #
       # If this request was successful, it should have a result code
       # in the 1xx range as documented in Parallels API documentation.
-      def success?
+      def successful?
         ( @code % 1000 ) / 100 == 1
       end
 
-      # If it was a failure, it's obviously not successful. Ingenious!
-      def error?
-        not success?
-      end
-
       #
-      def [] key
-        str = key.to_s.dup
-        str.gsub!(/\/(.?)/){ "::#{$1.upcase}" }
-        str.gsub!(/(?:_+|-+)([a-z])/){ $1.upcase }
-        str.gsub!(/(\A|\s)([A-Z])/){ $1 + $2.downcase }
-        @data[str] || nil
+      def [] index
+        # Convert :snake_case into lowerCamelCase.
+        key = index.to_s.dup
+        key.gsub!(/\/(.?)/){ "::#{$1.upcase}" }
+        key.gsub!(/(?:_+|-+)([a-z])/){ $1.upcase }
+        key.gsub!(/(\A|\s)([A-Z])/){ $1 + $2.downcase }
+        @data[key] if data or nil
       end
     end
 

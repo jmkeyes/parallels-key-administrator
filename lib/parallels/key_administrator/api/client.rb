@@ -1,7 +1,5 @@
 # lib/parallels/key_administrator/api/client.rb
 
-require 'parallels/key_administrator/api/base'
-
 module Parallels #:nodoc: Already documented.
 
   module KeyAdministrator #:nodoc: Already documented.
@@ -11,7 +9,11 @@ module Parallels #:nodoc: Already documented.
       # = PKA::API::Client
       #
       # A class to handle all client-related methods.
-      class Client < Base
+      class Client
+        def initialize portal
+          raise 'Must be constructed with a portal instance.' unless portal
+          @portal = portal
+        end
 
         # Create a new client from some information.
         #
@@ -23,7 +25,7 @@ module Parallels #:nodoc: Already documented.
         #
         #  +:unknown+ - Unknown parameters.
         #
-        def self.create details
+        def create details
           #handle 'partner10.createClient', details
           raise NotImplementedError, "This method is currently not implemented."
         end
@@ -38,9 +40,9 @@ module Parallels #:nodoc: Already documented.
         #
         #  +:unknown+ - Unknown parameters.
         #
-        def self.find_by details
+        def find_by details
           search_details = Common::ClientSearchInfo.from_criteria details
-          handle 'partner10.searchClients', search_details
+          @portal.request 'partner10.searchClients', search_details
         end
 
         # Check if these login credentials are valid.
@@ -49,11 +51,8 @@ module Parallels #:nodoc: Already documented.
         #
         #     puts "Login credentials are valid." if portal.clients.login_valid?
         #
-        def self.login_valid?
-          handle 'partner10.validateLogin' do |response|
-            # If the call was successful then we have valid credentials.
-            response.success?
-          end
+        def login_valid?
+          @portal.request 'partner10.validateLogin'
         end
 
         # Generate a new password for this client.
@@ -63,11 +62,8 @@ module Parallels #:nodoc: Already documented.
         #     password = portal.clients.generate_new_password!
         #     puts "New password is now '#{password}'." if password
         #
-        def self.generate_new_password!
-          handle 'partner10.generateNewPassword' do |response|
-            # Return the new password if the call was successful, or nil.
-            response.data['newPassword'] if response.success? or nil
-          end
+        def generate_new_password!
+          @portal.request 'partner10.generateNewPassword'
         end
 
       end

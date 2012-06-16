@@ -1,7 +1,5 @@
 # lib/parallels/key_administrator/api/key.rb
 
-require 'parallels/key_administrator/api/base'
-
 module Parallels #:nodoc: Already documented.
 
   module KeyAdministrator #:nodoc: Already documented.
@@ -10,8 +8,12 @@ module Parallels #:nodoc: Already documented.
 
       # = Parallels::KeyAdministrator::API::Key
       #
-      # A class to handle all client-related methods.
-      class Key < Base
+      # A class to @portal.request all client-related methods.
+      class Key
+        def initialize portal
+          raise 'Must be constructed with a portal instance.' unless portal
+          @portal = portal
+        end
 
         # Activate a key that uses a hardware ID, like Virtuozzo.
         #
@@ -20,10 +22,8 @@ module Parallels #:nodoc: Already documented.
         #  +number+ - A license key number.
         #  +uid+    - ???
         #
-        def self.activate_with_hwid number, uid
-          handle 'partner10.activateKey', number, uid do |response|
-            response.data[:key_number] if response.success? or nil
-          end
+        def activate_with_hwid key_number, uid
+          @portal.request 'partner10.activateKey', key_number, uid
         end
 
         # Activate a key that doesn't use a hardware ID, like SiteBuilder.
@@ -32,10 +32,8 @@ module Parallels #:nodoc: Already documented.
         #
         #  +number+ - A license key number.
         #
-        def self.activate number
-          handle 'partner10.activateKey', number do |response|
-            response.data[:key_number] if response.success? or nil
-          end
+        def activate key_number
+          @portal.request 'partner10.activateKey', key_number
         end
 
         # Add a note (text blob) to a given key that will show up in the portal.
@@ -45,10 +43,8 @@ module Parallels #:nodoc: Already documented.
         #  +number+ - A license key number.
         #  +note+   - Text to include with the key.
         #
-        def self.add_note! number, note
-          handle 'partner10.addNoteToKey', number, note do |response|
-            response.success?
-          end
+        def add_note! key_number, note
+          @portal.request 'partner10.addNoteToKey', key_number, note
         end
 
         # Associate a given key to a main key number.
@@ -58,10 +54,8 @@ module Parallels #:nodoc: Already documented.
         #  +main+  - The main license key number.
         #  +child+ - The child license key number to associate.
         #
-        def self.attach main, child
-          handle 'partner10.attachKey', main, child do |response|
-            response.success?
-          end
+        def attach main_key, child_key
+          @portal.request 'partner10.attachKey', main_key, child_key
         end
 
         # De-associate a given child key from it's parent.
@@ -70,10 +64,8 @@ module Parallels #:nodoc: Already documented.
         #
         #  +child+ - A license key number to detach from it's parent.
         #
-        def self.detach child
-          handle 'partner10.detachKey', child do |response|
-            response.success?
-          end
+        def detach child
+          @portal.request 'partner10.detachKey', child
         end
 
         # Bind a key to a specified IP address.
@@ -83,10 +75,8 @@ module Parallels #:nodoc: Already documented.
         #  +number+  - A license key number to bind.
         #  +address+ - The IP address to bind the license key to.
         #
-        def self.bind number, address
-          handle 'partner10.bindKey', number, address do |response|
-            response.data[:key_number] if response.success? or nil
-          end
+        def bind number, address
+          @portal.request 'partner10.bindKey', number, address
         end
 
         # Unbinds a key from any IP address.
@@ -95,10 +85,8 @@ module Parallels #:nodoc: Already documented.
         #
         #  +number+ - The license key number to unbind from it's IP address.
         #
-        def self.unbind number
-          handle 'partner10.unbindKey', number do |response|
-            response.data[:key_number] if response.success? or nil
-          end
+        def unbind number
+          @portal.request 'partner10.unbindKey', number
         end
 
         # Order/purchase a new key as needed.
@@ -107,7 +95,7 @@ module Parallels #:nodoc: Already documented.
         #
         #  +arguments+ - Unknown arguments.
         #
-        def self.create *arguments
+        def create *arguments
           raise NotImplementedError, "This method is currently not implemented."
         end
 
@@ -118,7 +106,7 @@ module Parallels #:nodoc: Already documented.
         #  +number+ - A license key number.
         #  +plan+   - A plan to upgrade this key to.
         #
-        def self.upgrade number, plan
+        def upgrade number, plan
           raise NotImplementedError, "This method is currently not implemented."
         end
 
@@ -129,10 +117,8 @@ module Parallels #:nodoc: Already documented.
         #  +number+ - A license key number.
         #  +plan+   - A plan to downgrade this key to.
         #
-        def self.downgrade number, plan
-          handle 'partner10.downgradeKey', number, plan do |response|
-            response.data[:key_number] if response.success? or nil
-          end
+        def downgrade number, plan
+          @portal.request 'partner10.downgradeKey', number, plan
         end
 
         # Get the available types and features a reseller is allowed to purchase.
@@ -141,10 +127,8 @@ module Parallels #:nodoc: Already documented.
         #
         #  +reseller+ - The reseller to retrieve available key types and features for.
         #
-        def self.available_types_and_features reseller
-          handle 'partner10.getAvailableKeyTypesAndFeatures', reseller do |response|
-            response.data if response.success? or nil
-          end
+        def available_types_and_features reseller
+          @portal.request 'partner10.getAvailableKeyTypesAndFeatures', reseller
         end
 
         # Find available upgrades for a key.
@@ -153,10 +137,8 @@ module Parallels #:nodoc: Already documented.
         #
         #  +number+ - A license key number to find upgrades for.
         #
-        def self.available_upgrades number
-          handle 'partner10.getAvailableUpgrades', number do |response|
-            response.data[:upgrade_plans] if response.success? or nil
-          end
+        def available_upgrades number
+          @portal.request 'partner10.getAvailableUpgrades', number
         end
 
         # Lookup key information by it's key number.
@@ -165,10 +147,8 @@ module Parallels #:nodoc: Already documented.
         #
         #  +number+ - A license key number to get metadata for.
         #
-        def self.metadata number
-          handle 'partner10.getKeyInfo', number do |response|
-            response[:key_info] if response.success? or nil
-          end
+        def metadata number
+          @portal.request 'partner10.getKeyInfo', number
         end
 
         # Lookup a key by IP address.
@@ -177,10 +157,8 @@ module Parallels #:nodoc: Already documented.
         #
         #  +address+ - An IP address to look up any attached license keys.
         #
-        def self.lookup address
-          handle 'partner10.getKeysInfoByIP', address do |response|
-            response.data[:keys_info] if response.success? or nil
-          end
+        def lookup address
+          @portal.request 'partner10.getKeysInfoByIP', address
         end
 
         # Find keys by a given a list of :ips or :macs.
@@ -194,11 +172,9 @@ module Parallels #:nodoc: Already documented.
         #  +:ips+  - An array of IP addresses in dotted-quad form to search for.
         #  +:macs+ - An array of MAC addresses in standard form to search for.
         #
-        def self.find_by criteria
+        def find_by criteria
           info = Common::ServerAddressInfo.from_criteria criteria
-          handle 'partner10.getKeyNumbers', info do |response|
-            response.data if response.success? or nil
-          end
+          @portal.request 'partner10.getKeyNumbers', info
         end
 
         # Retrieves the last usage information reported by Plesk for a key.
@@ -207,10 +183,8 @@ module Parallels #:nodoc: Already documented.
         #
         #  +number+ - Retrieve the usage information for this license key.
         #
-        def self.last_usage_info number
-          handle 'partner10.getLastPleskUsageInfo', number do |response|
-            response.data[:last_usage_info] if response.success? or nil
-          end
+        def last_usage_info number
+          @portal.request 'partner10.getLastPleskUsageInfo', number
         end
 
         # Renews the license for this key.
@@ -219,10 +193,8 @@ module Parallels #:nodoc: Already documented.
         #
         #  +number+ - Renew the license with this license key number.
         #
-        def self.renew number
-          handle 'partner10.renewKey', number do |response|
-            response.data if response.success? or nil
-          end
+        def renew number
+          @portal.request 'partner10.renewKey', number
         end
 
         # Resets any UID and deactivates the license for this key. (VZ)
@@ -231,10 +203,8 @@ module Parallels #:nodoc: Already documented.
         #
         #  +number+ - A license key number.
         #
-        def self.reset number
-          handle 'partner10.resetKey', number do |response|
-            response.data[:key_number] if response.success? or nil
-          end
+        def reset number
+          @portal.request 'partner10.resetKey', number
         end
 
         # Retrieves the binary copy of the specified key.
@@ -245,10 +215,8 @@ module Parallels #:nodoc: Already documented.
         #  +compatible+ - Should this license be backwards
         #                 with a previous version?
         #
-        def self.retrieve number, compatible = false
-          handle 'partner10.retrieveKey', number, compatible do |response|
-            response.data if response.success? or nil
-          end
+        def retrieve number, compatible = false
+          @portal.request 'partner10.retrieveKey', number, compatible
         end
 
         # Sends Key to the specified e-mail address, or the owner's e-mail address, possibly in ZIP format.
@@ -258,10 +226,8 @@ module Parallels #:nodoc: Already documented.
         #  +number+     - The license key number to retrieve and send.
         #  +recipient+  - The email address that should receieve this key.
         #  +compressed+ - Should the license key be compressed in a ZIP archive?
-        def self.send_by_email number, recipient, compressed = true
-          handle 'partner10.sendKeyByEmail', number, recipient, compressed do |response|
-            response.success?
-          end
+        def send_by_email number, recipient, compressed = true
+          @portal.request 'partner10.sendKeyByEmail', number, recipient, compressed
         end
 
         # Terminates the specified key.
@@ -270,10 +236,8 @@ module Parallels #:nodoc: Already documented.
         #
         #  +number+ - The license key number to terminate.
         #
-        def self.terminate number
-          handle 'partner10.terminateKey', number do |response|
-            response.data[:key_number] if response.success? or nil
-          end
+        def terminate number
+          @portal.request 'partner10.terminateKey', number
         end
 
         # Transfer a Virtuozzo key to another hardware ID.
@@ -283,10 +247,8 @@ module Parallels #:nodoc: Already documented.
         #  +number+      - The license key number to transfer.
         #  +hardware_id+ - The new hardware ID to transfer the license to.
         #
-        def self.transfer number, hardware_id
-          handle 'partner10.transferKey', number, hardware_id do |response|
-            response.data[:key_number] if response.success? or nil
-          end
+        def transfer number, hardware_id
+          @portal.request 'partner10.transferKey', number, hardware_id
         end
 
       end

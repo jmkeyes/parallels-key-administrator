@@ -23,7 +23,7 @@ module Parallels #:nodoc: Already documented
     #
     #   Requires the XMLRPC client bundled with Ruby.
     #
-    class Portal < ::XMLRPC::Client
+    class Portal
 
       # The default port that the Key Administrator gateway runs on.
       DEFAULT_PORT    = 7050
@@ -52,25 +52,58 @@ module Parallels #:nodoc: Already documented
       # ==== Note
       #
       # This is the first method for any call and is obviously required to use this library.
-      def initialize host, options = {}
+      def initialize host, opts = {}
         options = {
           :username => 'anonymous',
           :password => '',
           :insecure => false,
           :timeout  => DEFAULT_TIMEOUT,
-          :port     => DEFAULT_PORT
-        }.merge(options)
+          :port     => DEFAULT_PORT,
+          :debug    => false
+        }.merge(opts)
 
-        username = options[:username]
-        password = options[:password]
-        timeout  = options[:timeout]
-        port     = options[:port]
+        @credentials = API::Common::AuthInfo.new options[:username], options[:password]
 
-        @credentials = API::Common::AuthInfo.new username, password
+        @rpc = XMLRPC::Client.new host, '/', options[:port], nil, nil, nil, nil, true, options[:timeout]
 
-        super host, '/', port, nil, nil, nil, nil, true, timeout
+        if options[:insecure] or options[:debug]
+          # This is really ugly. Doesn't XMLRPC::Client have this ability? Maybe monkey patch it in?
+          http = @rpc.instance_variable_get :@http
+          http.instance_variable_set :@verify_mode, OpenSSL::SSL::VERIFY_NONE if options[:insecure]
+          http.set_debug_output($stderr) if options[:debug]
+        end
+      end
 
-        @http.instance_variable_set(:@verify_mode, OpenSSL::SSL::VERIFY_NONE) if options[:insecure]
+      # Action a request to the key administration portal.
+      #
+      # ==== Attributes
+      #
+      # +method+    - The XMLRPC method that should be invoked on the server.
+      # +arguments+ - Any arguments to be sent to the server with the call. You should
+      #               skip the credentials structure as it will be supplied by the client.
+      #
+      # ==== Example
+      #
+      #     portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', :username => '', :password => ''
+      #     response = portal.request 'partner10.validateLogin'
+      #     puts "You have valid credentials." if response.success?
+      #
+      # ==== Note
+      #
+      # Use of the proxy methods noted above is preferred, as this method does not shield
+      # the user for the retarded broken-ness of Parallels' badly designed API.
+      #
+      def request method, *arguments, &callback
+        ok, result = @rpc.call2 method, @credentials, *arguments
+
+        # Post process the response using an optional callback.
+        callback ||= lambda { |_result| Response.from_result _result }
+
+        if ok
+          instance_exec result, &callback
+        else
+          Response.from_fault result
+        end
       end
 
       # Proxy all calls to the API::Client class.
@@ -89,23 +122,7 @@ module Parallels #:nodoc: Already documented
       # well as verify your login credentials or automatically generate a new password
       # for your logon here.
       def client
-        class << proxy = Object.new
-          def method_missing method, *arguments
-            name, *parameters, callback = API::Client.send method, *arguments
-
-            response = @client.call name, *parameters
-
-            callback ||= lambda { |response| response }
-
-            instance_exec response, &callback
-          end
-        end
-
-        # Give this object access to our instance.
-        proxy.instance_variable_set(:@client, self)
-
-        # Proxy the call.
-        proxy
+        @client_ops ||= API::Client.new self
       end
 
       # Proxy calls to the API::Key class.
@@ -123,66 +140,8 @@ module Parallels #:nodoc: Already documented
       # portal. You should have the ability to audit, terminate, purchase, renew and transfer
       # licenses here.
       def key
-        class << proxy = Object.new
-          def method_missing method, *arguments
-            name, *parameters, callback = API::Key.send method, *arguments
-
-            response = @client.call name, *parameters
-
-            callback ||= lambda { |response| response }
-
-            instance_exec response, &callback
-          end
-        end
-
-        # Give this object access to our instance.
-        proxy.instance_variable_set(:@client, self)
-
-        # Proxy the call.
-        proxy
+        @key_ops ||= API::Key.new self
       end
-
-      # Rudimentary listing of methods provided by each proxy.
-      #
-      # ==== Example
-      #
-      #     portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', :username => '', :password => ''
-      #     puts portal.help :client
-      #
-      # ==== Note
-      #
-      # This method is only a stepping stone for better documentation of the Parallels'
-      # API methods in the future. It is only a basic reference to the methods supplied
-      # by the gem, and does not interact with the portal.
-      def help topic
-        classes = { :client => API::Client, :key => API::Key }
-        classes[topic].methods(false) if classes.keys.include? topic
-      end
-
-      # Perform an XMLRPC request agains the key administration portal.
-      #
-      # ==== Attributes
-      #
-      # +method+    - The XMLRPC method that should be invoked on the server.
-      # +arguments+ - Any arguments to be sent to the server with the call. You should
-      #               skip the credentials structure as it will be supplied by the client.
-      #
-      # ==== Example
-      #
-      #     portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', :username => '', :password => ''
-      #     response = portal.call 'partner10.validateLogin'
-      #     puts "You have valid credentials." if response.success?
-      #
-      # ==== Note
-      #
-      # Use of the proxy methods noted above is preferred, as this method does not shield
-      # the user for the retarded broken-ness of Parallels' badly designed API.
-      #
-      def call method, *arguments
-        ok, data = call2 method, @credentials, *arguments
-        Response.build_from_result data if ok or nil
-      end
-
     end
 
   end
