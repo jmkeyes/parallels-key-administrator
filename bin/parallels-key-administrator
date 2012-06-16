@@ -35,9 +35,9 @@ class KeyAdministratorCLI
 
       @portal = Parallels::KeyAdministrator::Portal.new hostname, :username => username, :password => password
 
-      credentials_valid = @portal.client.login_valid?
+      authentication = @portal.client.login_valid?
 
-      exit_now! 'Provided credentials are invalid or error while connecting to portal.' unless credentials_valid
+      exit_now! 'Provided credentials are invalid or error while connecting to portal.' unless authentication.successful?
 
       # Undocumented: return true to continue processing.
       credentials_valid
@@ -74,7 +74,7 @@ class KeyAdministratorCLI
 
         response = @portal.key.find_by criteria
 
-        data = response['keyInfos']
+        data = response[:key_infos]
 
         if options[:active]
           data.reject! { |key, value| key['terminated'] == true }
@@ -104,7 +104,9 @@ class KeyAdministratorCLI
         recipient = args.shift
         number = args.shift
 
-        if @portal.key.send_by_email number, recipient, options[:compress]
+        action = @portal.key.send_by_email number, recipient, options[:compress]
+
+        if action.successful?
           puts "License key #{number} successfully sent to #{recipient}."
         else
           puts "Could not send license key #{number} to #{recipient}; please check your arguments."
@@ -138,9 +140,12 @@ class KeyAdministratorCLI
         exit_now! 'Please provide a license key number to retrieve.' if args.empty? or args.length != 1
         response = @portal.key.retrieve args.shift, options[:compatible]
 
-        # XXX: Symbolize response keys.
-        key_number = response['keyNumber']
-        key_data = response['key']
+        if not response.successful?
+            exit_now! 'Failed to retrieve key!'
+        end
+
+        key_number = response[:key_number]
+        key_data = response[:key]
 
         if options[:output]
           # Write the key to the file specified.
@@ -174,7 +179,7 @@ class KeyAdministratorCLI
 
         response = @portal.key.renew key_number
 
-        if response.nil?
+        if response.successful?
           puts "License key #{key_number} could not be renewed."
         else
           puts response
@@ -190,7 +195,7 @@ class KeyAdministratorCLI
 
         response = @portal.key.last_usage_info key_number
 
-        if response.nil?
+        if response.successful?
           puts "No data has been reported for #{key_number} yet."
         else
           puts response
