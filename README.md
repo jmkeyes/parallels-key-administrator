@@ -30,7 +30,7 @@ your Partner API credentials):
     require 'parallels/key_administrator'
 
     # Connect to ka.parallels.com with the specified credentials.
-    portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', :username => 'USERNAME', :password => 'PASSWORD'
+    portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', username: 'USERNAME', password: 'PASSWORD'
 
     # Validate your login credentials.
     request = portal.client.login_valid?

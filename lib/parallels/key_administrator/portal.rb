@@ -16,7 +16,7 @@ module Parallels #:nodoc: Already documented
     #
     # == Example
     #
-    #   portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', :username => '', :password => ''
+    #   portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', username: '', password: ''
     #   puts portal.help :clients
     #
     # == Dependencies
@@ -47,19 +47,19 @@ module Parallels #:nodoc: Already documented
       #
       # ==== Example
       #
-      #     portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', :username => '', :password => ''
+      #     portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', username: '', password: ''
       #
       # ==== Note
       #
       # This is the first method for any call and is obviously required to use this library.
       def initialize host, opts = {}
         options = {
-          :username => 'anonymous',
-          :password => '',
-          :insecure => false,
-          :timeout  => DEFAULT_TIMEOUT,
-          :port     => DEFAULT_PORT,
-          :debug    => false
+          username: 'anonymous',
+          password: '',
+          insecure: false,
+          timeout:  DEFAULT_TIMEOUT,
+          port:     DEFAULT_PORT,
+          debug:    false
         }.merge(opts)
 
         @credentials = API::Common::AuthInfo.new options[:username], options[:password]
@@ -84,7 +84,7 @@ module Parallels #:nodoc: Already documented
       #
       # ==== Example
       #
-      #     portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', :username => '', :password => ''
+      #     portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', username: '', password: ''
       #     response = portal.request 'partner10.validateLogin'
       #     puts "You have valid credentials." if response.successful?
       #
@@ -110,8 +110,8 @@ module Parallels #:nodoc: Already documented
       #
       # ==== Example
       #
-      #     portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', :username => '', :password => ''
-      #     response = portal.client.find_by :email => 'joe@domain.com'
+      #     portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', username: '', password: ''
+      #     response = portal.client.find_by email: 'joe@domain.com'
       #     puts response[:company_mame] if response.successful?
       #
       # ==== Note
@@ -129,7 +129,7 @@ module Parallels #:nodoc: Already documented
       #
       # ==== Example
       #
-      #     portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', :username => '', :password => ''
+      #     portal = Parallels::KeyAdministrator::Portal.new 'ka.parallels.com', username: '', password: ''
       #     response = portal.key.retrieve 'PLSK.00000000.0000'
       #     puts response[:key] if response.successful?
       #
